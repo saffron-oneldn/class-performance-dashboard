@@ -858,7 +858,7 @@
         <span id="uploadZoneText">Drop WodBoard CSV files here or <u>click to browse</u></span>
         <input type="file" id="csvFileInput" accept=".csv" multiple style="display:none">
       </label>
-      <button class="data-source-btn" id="clearDataBtn" style="display:none">Clear</button>
+
       <div class="data-source-status" id="dataSourceStatus">Showing sample data</div>
     </div>
 
@@ -1281,7 +1281,7 @@
       zone.classList.add('has-data');
       document.getElementById('uploadZoneText').textContent =
         `✓ ${data.length.toLocaleString()} records${saved ? ' · saved to Supabase' : ''}`;
-      document.getElementById('clearDataBtn').style.display = '';
+      // clear button removed
 
       populateSelects();
       renderCurrentTab();
@@ -1328,7 +1328,7 @@
         zone.classList.add('has-data');
         document.getElementById('uploadZoneText').textContent =
           `✓ ${data.length.toLocaleString()} records · last upload ${dateStr}`;
-        document.getElementById('clearDataBtn').style.display = '';
+        // clear button removed
         populateSelects();
         renderCurrentTab();
         updateStatus('success', `${data.length.toLocaleString()} records loaded from Supabase`);
@@ -1929,18 +1929,6 @@
       handleFiles(e.dataTransfer.files);
     });
 
-    document.getElementById('clearDataBtn').addEventListener('click', (e) => {
-      e.preventDefault();
-      clearStorage();
-      data = EMBEDDED_DATA;
-      const zone = document.getElementById('uploadZone');
-      zone.classList.remove('has-data');
-      document.getElementById('uploadZoneText').innerHTML = 'Drop WodBoard CSV files here or <u>click to browse</u>';
-      document.getElementById('clearDataBtn').style.display = 'none';
-      populateSelects();
-      renderCurrentTab();
-      updateStatus('', 'Showing sample data — upload CSV files to load your own');
-    });
 
     document.getElementById('quarterSelect').addEventListener('change', (e) => {
       quarterlyState.quarter = e.target.value;
