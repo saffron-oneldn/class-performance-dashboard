@@ -944,7 +944,7 @@
       const parts = str.trim().split(' ');
       const [dd, mm, yyyy] = parts[0].split('/');
       const time = parts[1] || '00:00';
-      return `${yyyy}-${mm}-${dd}T${time}:00`;
+      return `${yyyy}-${mm}-${dd}T${time}:00Z`; // Z = force UTC, prevents BST/DST shift
     }
     function isoToStartTime(isoStr) {
       if (!isoStr) return '';
