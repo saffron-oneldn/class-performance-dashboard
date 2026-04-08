@@ -1150,13 +1150,24 @@
 
     async function loadDataFromStorage() {
       try {
-        const { data: records, error } = await _db
-          .from('class_performance')
-          .select('*')
-          .order('week_start', { ascending: true });
-        if (error) throw error;
-        if (!records || records.length === 0) return null;
-        return records.map(r => ({
+        // Paginate in batches of 1000 to bypass Supabase's default row cap
+        const PAGE = 1000;
+        let allRecords = [];
+        let from = 0;
+        while (true) {
+          const { data: records, error } = await _db
+            .from('class_performance')
+            .select('*')
+            .order('week_start', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          if (!records || records.length === 0) break;
+          allRecords = allRecords.concat(records);
+          if (records.length < PAGE) break; // last page
+          from += PAGE;
+        }
+        if (allRecords.length === 0) return null;
+        return allRecords.map(r => ({
           Class:          r.class_name,
           'Start time':   isoToStartTime(r.start_time),
           Capacity:       r.capacity,
