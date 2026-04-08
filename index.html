@@ -1254,9 +1254,17 @@
 
       data = deduped.sort((a, b) => parseDate(a.Week_Start) - parseDate(b.Week_Start));
 
-      // Persist to Supabase
+      // Persist to Supabase — only upsert the new rows (Supabase handles dedup)
       document.getElementById('uploadZoneText').textContent = 'Saving to Supabase…';
-      const saved = await saveDataToStorage(data);
+      const saved = await saveDataToStorage(newRows);
+
+      // Re-fetch from Supabase to get the authoritative full dataset
+      // (avoids race condition where initData hadn't finished loading before upload)
+      if (saved) {
+        document.getElementById('uploadZoneText').textContent = 'Refreshing from Supabase…';
+        const refreshed = await loadDataFromStorage();
+        if (refreshed) data = refreshed;
+      }
 
       const zone = document.getElementById('uploadZone');
       zone.classList.add('has-data');
