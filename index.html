@@ -1885,7 +1885,7 @@
           data: {
             labels: weeks.map(w => {
               const date = parseDate(w);
-              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              return 'W/C ' + date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
             }),
             datasets: datasets
           },
