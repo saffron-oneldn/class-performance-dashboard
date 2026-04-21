@@ -1837,7 +1837,7 @@
 
     function renderTrends() {
       const classes = [...new Set(data.map(r => r.Class))];
-      const weeks = [...new Set(data.map(r => r.Week_Start))].sort();
+      const weeks = [...new Set(data.map(r => r.Week_Start))].sort((a, b) => parseDate(a) - parseDate(b));  
 
       let toggleHtml = classes.map((c, idx) => `
         <button class="class-toggle" data-class="${c}" style="--color: ${CLASS_COLOURS[idx % CLASS_COLOURS.length]}">
