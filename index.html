@@ -1056,6 +1056,7 @@
     let quarterlyState = { quarter: '', months: new Set() };
     let weeklyState = { week: '' };
     let weeklyCoachSort = 'popularity';
+    let quarterlyCoachSort = 'popularity';
     let charts = {};
 
     // Helpers
@@ -1763,7 +1764,7 @@
             const avg = wbr(rows);
             return { name, avg, count: rows.length };
           })
-          .sort((a, b) => b.avg - a.avg);
+          .sort((a, b) => quarterlyCoachSort === 'volume' ? b.count - a.count : b.avg - a.avg);
 
         let coachHtml = coachBreakdown.map(c => {
           const fillColor = kpiColor(c.avg, 70);
@@ -1821,7 +1822,13 @@
                 <div class="month-class-breakdown">${classHtml}</div>
               </div>
               <div class="month-breakdown-box">
-                <div class="breakdown-title">Coach Breakdown</div>
+                <div class="breakdown-header">
+                  <div class="breakdown-title">Coach Breakdown</div>
+                  <div class="sort-toggles">
+                    <button class="sort-btn ${quarterlyCoachSort === 'popularity' ? 'active' : ''}" onclick="quarterlyCoachSort='popularity';renderMonthly()">Popularity</button>
+                    <button class="sort-btn ${quarterlyCoachSort === 'volume' ? 'active' : ''}" onclick="quarterlyCoachSort='volume';renderMonthly()">Volume</button>
+                  </div>
+                </div>
                 <div class="month-coach-breakdown">${coachHtml}</div>
               </div>
             </div>
