@@ -1471,7 +1471,7 @@
 
 
     function renderFlags() {
-      var weeks = Array.from(new Set(data.map(function(r){ return r.Week_Start; }))).sort();
+      var weeks = Array.from(new Set(data.map(function(r){ return r.Week_Start; }))).sort(function(a, b) { return parseDate(a) - parseDate(b); });
       if (!weeks.length) { document.getElementById('flagsSummary').textContent = 'No data loaded.'; return; }
       var recentWeeks = weeks.slice(-3);
       var latestWeek = recentWeeks[recentWeeks.length - 1];
