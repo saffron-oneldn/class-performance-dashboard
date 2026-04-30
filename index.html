@@ -1473,10 +1473,12 @@
     function renderFlags() {
       var weeks = Array.from(new Set(data.map(function(r){ return r.Week_Start; }))).sort();
       if (!weeks.length) { document.getElementById('flagsSummary').textContent = 'No data loaded.'; return; }
-      var latestWeek = weeks[weeks.length - 1];
+      var recentWeeks = weeks.slice(-3);
+      var latestWeek = recentWeeks[recentWeeks.length - 1];
 
       var combos = {};
       data.forEach(function(r) {
+        if (!recentWeeks.includes(r.Week_Start)) return;
         var key = r.Class + '|||' + r.Coach_Label;
         if (!combos[key]) combos[key] = { cls: r.Class, coach: r.Coach_Label, weeks: {} };
         if (!combos[key].weeks[r.Week_Start]) combos[key].weeks[r.Week_Start] = [];
@@ -1489,8 +1491,8 @@
         var latestAvg = c.weeks[latestWeek].reduce(function(s,v){ return s+v; }, 0) / c.weeks[latestWeek].length;
         if (latestAvg >= 50) return;
         var streak = 0;
-        for (var i = weeks.length - 1; i >= 0; i--) {
-          var w = weeks[i];
+        for (var i = recentWeeks.length - 1; i >= 0; i--) {
+          var w = recentWeeks[i];
           if (!c.weeks[w]) break;
           var avg = c.weeks[w].reduce(function(s,v){ return s+v; }, 0) / c.weeks[w].length;
           if (avg < 50) streak++; else break;
@@ -1509,13 +1511,13 @@
       if (!flags.length) {
         document.getElementById('flagsSummary').innerHTML = '';
         document.getElementById('flagsGrid').innerHTML =
-          '<div class="flags-clear"><div>All clear &mdash; no classes below 50% this week</div>' +
-          '<div class="flags-clear-sub">Week of ' + latestWeek + '</div></div>';
+          '<div class="flags-clear"><div>All clear &mdash; no classes below 50% in the past 3 weeks</div>' +
+          '<div class="flags-clear-sub">Past 3 weeks ending ' + latestWeek + '</div></div>';
         return;
       }
 
       document.getElementById('flagsSummary').innerHTML =
-        '<strong>' + flags.length + ' class' + (flags.length !== 1 ? 'es' : '') + ' flagged</strong> for week of ' + latestWeek +
+        '<strong>' + flags.length + ' class' + (flags.length !== 1 ? 'es' : '') + ' flagged</strong> — past 3 weeks ending ' + latestWeek +
         (purpleCount ? ' &mdash; <span style="color:#a78bfa;font-weight:700">' + purpleCount + ' chronic (3+ weeks)</span>' : '') +
         (redCount ? ' &mdash; <span style="color:#f87171;font-weight:700">' + redCount + ' immediate</span>' : '');
 
