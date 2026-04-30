@@ -525,8 +525,24 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+    }
+    .breakdown-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       margin-bottom: 12px;
     }
+    .sort-toggles { display: flex; gap: 6px; }
+    .sort-btn {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #999;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .sort-btn.active { border-color: #e8c547; color: #e8c547; }
 
     .class-bar-row, .coach-bar-row {
       margin-bottom: 12px;
@@ -1039,6 +1055,7 @@
     let currentTab = 'flags';
     let quarterlyState = { quarter: '', months: new Set() };
     let weeklyState = { week: '' };
+    let weeklyCoachSort = 'popularity';
     let charts = {};
 
     // Helpers
@@ -1379,6 +1396,13 @@
       return totalCapacity > 0 ? (totalBookings / totalCapacity) * 100 : 0;
     }
 
+    // Cancellation rate: cancelled ÷ (bookings + cancelled) × 100
+    function cancellationRate(rows) {
+      const totalCancelled = rows.reduce((s, r) => s + (r.Cancelled || 0), 0);
+      const totalBooked = rows.reduce((s, r) => s + r.Bookings + (r.Cancelled || 0), 0);
+      return totalBooked > 0 ? (totalCancelled / totalBooked) * 100 : 0;
+    }
+
     // Data initialisation — load from Supabase, or fall back to sample
     async function initData() {
       updateStatus('', 'Loading from Supabase…');
@@ -1480,9 +1504,10 @@
       data.forEach(function(r) {
         if (!recentWeeks.includes(r.Week_Start)) return;
         var key = r.Class + '|||' + r.Coach_Label;
-        if (!combos[key]) combos[key] = { cls: r.Class, coach: r.Coach_Label, weeks: {} };
+        if (!combos[key]) combos[key] = { cls: r.Class, coach: r.Coach_Label, weeks: {}, rows: [] };
         if (!combos[key].weeks[r.Week_Start]) combos[key].weeks[r.Week_Start] = [];
         combos[key].weeks[r.Week_Start].push(r.Attendance_Pct);
+        combos[key].rows.push(r);
       });
 
       var flags = [];
@@ -1497,7 +1522,8 @@
           var avg = c.weeks[w].reduce(function(s,v){ return s+v; }, 0) / c.weeks[w].length;
           if (avg < 50) streak++; else break;
         }
-        flags.push({ cls: c.cls, coach: c.coach, fill: latestAvg, streak: streak, type: streak >= 3 ? 'purple' : 'red' });
+        var canx = cancellationRate(c.rows);
+        flags.push({ cls: c.cls, coach: c.coach, fill: latestAvg, streak: streak, canx: canx, type: streak >= 3 ? 'purple' : 'red' });
       });
 
       flags.sort(function(a, b) {
@@ -1532,6 +1558,7 @@
           '<div class="flag-stats">' +
             '<div><div class="flag-stat-label">Fill this week</div><div class="flag-stat-val' + valClass + '">' + f.fill.toFixed(1) + '%</div></div>' +
             '<div><div class="flag-stat-label">Below 50% for</div><div class="flag-stat-val' + valClass + '">' + streakLabel + '</div></div>' +
+            '<div><div class="flag-stat-label">Canx rate</div><div class="flag-stat-val">' + f.canx.toFixed(1) + '%</div></div>' +
           '</div>' +
           '<div class="flag-actions">' +
             '<div class="flag-action-pill">Class design</div>' +
@@ -1553,29 +1580,6 @@
     }
 
     function renderMonthly() {
-
-      // Coach leaderboard (all-time)
-      var coachAllTime = {};
-      data.forEach(function(r) {
-        if (!coachAllTime[r.Coach_Label]) coachAllTime[r.Coach_Label] = { sessions: 0, totalPct: 0, flagged: 0 };
-        coachAllTime[r.Coach_Label].sessions++;
-        coachAllTime[r.Coach_Label].totalPct += r.Attendance_Pct;
-        if (r.Attendance_Pct < 50) coachAllTime[r.Coach_Label].flagged++;
-      });
-      var leaderboard = Object.entries(coachAllTime)
-        .map(function(e) { var n=e[0], s=e[1]; return { name: n, sessions: s.sessions, avg: s.totalPct/s.sessions, flagged: s.flagged }; })
-        .sort(function(a, b) { return b.avg - a.avg; });
-      var lbRows = leaderboard.map(function(c) {
-        var pctClass = c.avg >= 70 ? 'green' : c.avg >= 60 ? 'amber' : 'red';
-        var flagClass = c.flagged === 0 ? 'green' : 'red';
-        return '<tr><td class="coach-name-cell">' + c.name + '</td><td>' + c.sessions +
-          '</td><td><span class="coach-lb-pct ' + pctClass + '">' + c.avg.toFixed(1) + '%</span></td>' +
-          '<td><span class="coach-lb-flagged ' + flagClass + '">' + c.flagged + '</span></td></tr>';
-      }).join('');
-      document.getElementById('coachLeaderboard').innerHTML =
-        '<div class="coach-leaderboard"><div class="coach-leaderboard-title">All-Time Coach Performance</div>' +
-        '<table class="coach-lb-table"><thead><tr><th>Coach</th><th>Sessions</th><th>Avg Fill %</th><th>Sessions &lt;50%</th></tr></thead>' +
-        '<tbody>' + lbRows + '</tbody></table></div>';
 
       const filtered = getFilteredData(quarterlyState.months);
       
@@ -1836,6 +1840,7 @@
       const avgAttendance = filtered.reduce((s, r) => s + r.Attendance_Pct, 0) / filtered.length || 0;
       const peakData = filtered.filter(r => r.Is_Peak);
       const avgPeakBooking = wbr(peakData);
+      const avgCanx = cancellationRate(filtered);
 
       const kpiHtml = `
         <div class="kpi-card ${kpiColor(avgBooking, 70)}">
@@ -1857,6 +1862,11 @@
           <div class="kpi-label">Sessions</div>
           <div class="kpi-value">${filtered.length}</div>
         </div>
+        <div class="kpi-card ${avgCanx > 30 ? 'red' : avgCanx > 15 ? 'amber' : 'green'}">
+          <div class="kpi-label">Canx Rate</div>
+          <div class="kpi-value">${formatPct(avgCanx)}</div>
+          <div class="kpi-target">Target: &lt;15%</div>
+        </div>
       `;
       document.getElementById('weeklyKPI').innerHTML = kpiHtml;
 
@@ -1868,7 +1878,8 @@
       const classBreakdown = Object.entries(classByName)
         .map(([name, rows]) => {
           const avg = wbr(rows);
-          return { name, avg, count: rows.length };
+          const canx = cancellationRate(rows);
+          return { name, avg, count: rows.length, canx };
         })
         .sort((a, b) => b.avg - a.avg);
 
@@ -1884,7 +1895,7 @@
                 <div class="class-bar-target" style="left: ${targetPct}%"></div>
               </div>
             </div>
-            <div class="class-bar-count">n=${c.count}</div>
+            <div class="class-bar-count">n=${c.count} · ↩ ${c.canx.toFixed(0)}%</div>
           </div>
         `;
       }).join('');
@@ -1899,7 +1910,7 @@
           const avg = wbr(rows);
           return { name, avg, count: rows.length };
         })
-        .sort((a, b) => b.avg - a.avg);
+        .sort((a, b) => weeklyCoachSort === 'volume' ? b.count - a.count : b.avg - a.avg);
 
       let coachHtml = coachBreakdown.map(c => {
         const fillColor = kpiColor(c.avg, 70);
@@ -1924,7 +1935,13 @@
           ${classHtml}
         </div>
         <div class="weekly-breakdown-card">
-          <div class="breakdown-title">Coach Breakdown</div>
+          <div class="breakdown-header">
+            <div class="breakdown-title">Coach Breakdown</div>
+            <div class="sort-toggles">
+              <button class="sort-btn ${weeklyCoachSort === 'popularity' ? 'active' : ''}" onclick="weeklyCoachSort='popularity';renderWeekly()">Popularity</button>
+              <button class="sort-btn ${weeklyCoachSort === 'volume' ? 'active' : ''}" onclick="weeklyCoachSort='volume';renderWeekly()">Volume</button>
+            </div>
+          </div>
           ${coachHtml}
         </div>
       `;
